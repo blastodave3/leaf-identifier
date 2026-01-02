@@ -86,31 +86,31 @@
         }
 
         function startCamera() {
-            // Request the back camera specifically
-            const constraints = {
-                video: {
-                    facingMode: { exact: "environment" }
-                },
-                audio: false
-            };
+    document.getElementById('status').innerText = "Attempting to open camera...";
+    
+    // Using 'ideal' instead of 'exact' makes it much more compatible
+    let constraints = {
+        video: { 
+            facingMode: { ideal: "environment" } 
+        },
+        audio: false
+    };
 
-            // If "exact" environment fails (like on a desktop), fall back to any camera
-            video = createCapture(constraints, (stream) => {
-                console.log("Camera stream started");
-                document.getElementById('start-btn').style.display = 'none';
-                document.getElementById('status').innerText = "AI is Scanning...";
-                classifyVideo();
-            }).catch(err => {
-                // Fallback for desktop/laptop webcams
-                video = createCapture(VIDEO, () => {
-                    document.getElementById('start-btn').style.display = 'none';
-                    classifyVideo();
-                });
-            });
+    video = createCapture(constraints, function(stream) {
+        console.log("Camera is working!");
+        document.getElementById('start-btn').style.display = 'none';
+        document.getElementById('status').innerText = "AI is Scanning...";
+        classifyVideo(); 
+    });
 
-            video.size(320, 240);
-            video.hide();
-        }
+    // If the browser blocks it, show an error message on the screen
+    video.elt.onerror = function() {
+        document.getElementById('status').innerText = "Camera Error: Please check permissions.";
+    };
+
+    video.size(320, 240);
+    video.hide();
+}
 
         function classifyVideo() {
             if (modelLoaded && video) {
