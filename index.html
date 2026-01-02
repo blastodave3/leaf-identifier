@@ -4,108 +4,117 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tree Leaf Identifier</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.4/p5.min.js"></script>
-    <script src="https://unpkg.com/ml5@latest/dist/ml5.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/p5@1.9.4/lib/p5.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/ml5@0.12.2/dist/ml5.min.js"></script>
     <style>
-        body { font-family: sans-serif; text-align: center; background: #1a1a1a; color: white; margin: 0; padding: 20px; }
-        #canvas-container { margin: 20px auto; display: inline-block; border: 3px solid #4CAF50; border-radius: 12px; overflow: hidden; background: #000; }
-        button { padding: 15px 30px; font-size: 18px; background: #4CAF50; color: white; border: none; border-radius: 8px; cursor: pointer; margin-top: 20px; }
-        button:active { background: #45a049; }
-        .loading-text { color: #aaa; font-style: italic; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+            text-align: center; 
+            background: #121212; 
+            color: #e0e0e0; 
+            margin: 0; 
+            padding: 20px; 
+        }
+        #canvas-container { 
+            margin: 20px auto; 
+            border: 4px solid #2e7d32; 
+            border-radius: 15px; 
+            overflow: hidden; 
+            display: inline-block;
+            background: #000;
+            line-height: 0;
+        }
+        .status-box {
+            background: #263238;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+        button { 
+            padding: 16px 32px; 
+            font-size: 18px; 
+            font-weight: bold;
+            background: #4caf50; 
+            color: white; 
+            border: none; 
+            border-radius: 50px; 
+            cursor: pointer; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+        button:active { background: #388e3c; transform: scale(0.98); }
     </style>
 </head>
 <body>
-    <h2>Tree Leaf Identifier</h2>
-    <p id="status" class="loading-text">Loading Model...</p>
+
+    <h2>Tree ID</h2>
     
+    <div class="status-box">
+        <span id="status">Loading AI Model...</span>
+    </div>
+
     <div id="canvas-container"></div>
-    <br>
-    <button id="start-btn" onclick="startCamera()">Start Camera</button>
+    
+    <div id="ui-controls">
+        <button id="start-btn" onclick="startCamera()">TAP TO START CAMERA</button>
+    </div>
 
     <script>
-        // REPLACE with your Model URL
-          let imageModelURL = 'https://teachablemachine.withgoogle.com/models/7ZyhWuPe7/';
+        // 1. YOUR MODEL URL GOES HERE (Make sure it ends with a /)
+         let imageModelURL = 'https://teachablemachine.withgoogle.com/models/7ZyhWuPe7/';
         
         let classifier;
         let video;
-        let flippedVideo;
-        let label = "Waiting for camera...";
-        let isModelLoaded = false;
+        let label = "Ready to start";
+        let confidence = "";
+        let modelLoaded = false;
 
         function preload() {
+            // Load the model
             classifier = ml5.imageClassifier(imageModelURL + 'model.json', () => {
-                isModelLoaded = true;
-                document.getElementById('status').innerText = "Model Ready! Tap Start.";
+                modelLoaded = true;
+                document.getElementById('status').innerText = "AI Model Ready!";
+                console.log("Model Loaded Successfully");
             });
         }
 
         function setup() {
-            let canvas = createCanvas(320, 260);
+            // Create a canvas that fits mobile screens well
+            let canvas = createCanvas(320, 280);
             canvas.parent('canvas-container');
             background(0);
         }
 
-       function startCamera() {
-    let constraints = {
-        video: { facingMode: { ideal: "environment" } },
-        audio: false
-    };
+        function startCamera() {
+            // Request the back camera specifically
+            const constraints = {
+                video: {
+                    facingMode: { exact: "environment" }
+                },
+                audio: false
+            };
 
-    // We pass the classifyVideo function AS a callback here 
-    // so it only starts once the stream is 100% active
-    video = createCapture(constraints, function(stream) {
-        console.log("Stream active");
-        document.getElementById('start-btn').style.display = 'none';
-        document.getElementById('status').innerText = "Scanning...";
-        classifyVideo(); // Start the AI now
-    });
+            // If "exact" environment fails (like on a desktop), fall back to any camera
+            video = createCapture(constraints, (stream) => {
+                console.log("Camera stream started");
+                document.getElementById('start-btn').style.display = 'none';
+                document.getElementById('status').innerText = "AI is Scanning...";
+                classifyVideo();
+            }).catch(err => {
+                // Fallback for desktop/laptop webcams
+                video = createCapture(VIDEO, () => {
+                    document.getElementById('start-btn').style.display = 'none';
+                    classifyVideo();
+                });
+            });
 
-    video.size(320, 240);
-    video.hide();
-}
-
-function classifyVideo() {
-    // Check if the model is loaded AND the video is actually playing
-    if (isModelLoaded && video && video.elt.readyState === 4) {
-        classifier.classify(video, gotResult);
-    } else {
-        // If not ready, wait 100ms and try again
-        setTimeout(classifyVideo, 100);
-    }
-}
-
-function gotResult(error, results) {
-    if (error) {
-        console.error("AI Error:", error);
-        return;
-    }
-    // Update the label variable which draw() uses
-    if (results && results[0]) {
-        label = results[0].label + " (" + floor(results[0].confidence * 100) + "%)";
-    }
-    classifyVideo(); // Loop
-}
-
-        function draw() {
-            background(0);
-            if (video) {
-                // Draw the video to the canvas
-                image(video, 0, 0, 320, 240);
-                
-                // Draw the label at the bottom
-                fill(255);
-                textSize(18);
-                textAlign(CENTER);
-                text(label, width / 2, height - 10);
-            }
+            video.size(320, 240);
+            video.hide();
         }
 
         function classifyVideo() {
-            if (isModelLoaded && video) {
+            if (modelLoaded && video) {
                 classifier.classify(video, gotResult);
-            } else {
-                // If model isn't ready, try again in 500ms
-                setTimeout(classifyVideo, 500);
             }
         }
 
@@ -114,9 +123,41 @@ function gotResult(error, results) {
                 console.error(error);
                 return;
             }
-            label = results[0].label + " (" + floor(results[0].confidence * 100) + "%)";
+            
+            // Update the display text
+            if (results && results[0]) {
+                label = results[0].label;
+                confidence = floor(results[0].confidence * 100) + "%";
+            }
+            
+            // Keep the loop going
             classifyVideo();
+        }
+
+        function draw() {
+            background(0);
+            
+            if (video) {
+                // Draw camera feed
+                image(video, 0, 0, 320, 240);
+                
+                // Draw simple label bar at bottom
+                fill(46, 125, 50);
+                rect(0, 240, 320, 40);
+                
+                // Draw text
+                fill(255);
+                textSize(20);
+                textAlign(CENTER, CENTER);
+                text(label + " " + confidence, width / 2, 260);
+            } else {
+                // Show prompt before camera starts
+                fill(150);
+                textAlign(CENTER, CENTER);
+                text("Tap the button below\nto activate camera", width / 2, height / 2);
+            }
         }
     </script>
 </body>
 </html>
+
