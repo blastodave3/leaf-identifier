@@ -45,25 +45,46 @@
             background(0);
         }
 
-        function startCamera() {
-            // Mobile constraints to force the rear camera
-            let constraints = {
-                video: { facingMode: { ideal: "environment" } },
-                audio: false
-            };
+       function startCamera() {
+    let constraints = {
+        video: { facingMode: { ideal: "environment" } },
+        audio: false
+    };
 
-            video = createCapture(constraints, function(stream) {
-                console.log("Stream active");
-                document.getElementById('start-btn').style.display = 'none';
-                document.getElementById('status').innerText = "Scanning...";
-            });
+    // We pass the classifyVideo function AS a callback here 
+    // so it only starts once the stream is 100% active
+    video = createCapture(constraints, function(stream) {
+        console.log("Stream active");
+        document.getElementById('start-btn').style.display = 'none';
+        document.getElementById('status').innerText = "Scanning...";
+        classifyVideo(); // Start the AI now
+    });
 
-            video.size(320, 240);
-            video.hide();
-            
-            // Start the classification loop
-            classifyVideo();
-        }
+    video.size(320, 240);
+    video.hide();
+}
+
+function classifyVideo() {
+    // Check if the model is loaded AND the video is actually playing
+    if (isModelLoaded && video && video.elt.readyState === 4) {
+        classifier.classify(video, gotResult);
+    } else {
+        // If not ready, wait 100ms and try again
+        setTimeout(classifyVideo, 100);
+    }
+}
+
+function gotResult(error, results) {
+    if (error) {
+        console.error("AI Error:", error);
+        return;
+    }
+    // Update the label variable which draw() uses
+    if (results && results[0]) {
+        label = results[0].label + " (" + floor(results[0].confidence * 100) + "%)";
+    }
+    classifyVideo(); // Loop
+}
 
         function draw() {
             background(0);
