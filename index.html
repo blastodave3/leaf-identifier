@@ -7,103 +7,95 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.4/p5.min.js"></script>
     <script src="https://unpkg.com/ml5@latest/dist/ml5.min.js"></script>
     <style>
-        body { font-family: sans-serif; text-align: center; background: #222; color: white; }
-        canvas { border-radius: 10px; margin-top: 20px; }
+        body { font-family: sans-serif; text-align: center; background: #1a1a1a; color: white; margin: 0; padding: 20px; }
+        #canvas-container { margin: 20px auto; display: inline-block; border: 3px solid #4CAF50; border-radius: 12px; overflow: hidden; background: #000; }
+        button { padding: 15px 30px; font-size: 18px; background: #4CAF50; color: white; border: none; border-radius: 8px; cursor: pointer; margin-top: 20px; }
+        button:active { background: #45a049; }
+        .loading-text { color: #aaa; font-style: italic; }
     </style>
 </head>
 <body>
     <h2>Tree Leaf Identifier</h2>
+    <p id="status" class="loading-text">Loading Model...</p>
+    
     <div id="canvas-container"></div>
+    <br>
+    <button id="start-btn" onclick="startCamera()">Start Camera</button>
 
     <script>
-        // --- 1. SETTINGS ---
-        // REPLACE THIS with your own model link from Teachable Machine!
-       let imageModelURL = 'https://teachablemachine.withgoogle.com/models/7ZyhWuPe7/';
+        // REPLACE with your Model URL
+        let imageModelURL = 'https://teachablemachine.withgoogle.com/models/YOUR_MODEL_ID/';
         
         let classifier;
         let video;
         let flippedVideo;
-        let label = "Loading model...";
+        let label = "Waiting for camera...";
+        let isModelLoaded = false;
 
-        // --- 2. PRELOAD ---
         function preload() {
-            // Load the model before the sketch starts
-            classifier = ml5.imageClassifier(imageModelURL + 'model.json');
+            classifier = ml5.imageClassifier(imageModelURL + 'model.json', () => {
+                isModelLoaded = true;
+                document.getElementById('status').innerText = "Model Ready! Tap Start.";
+            });
         }
 
-        // --- 3. SETUP (Your Code) ---
         function setup() {
-    let canvas = createCanvas(320, 260);
-    canvas.parent('canvas-container');
-    
-    // Updated video constraints for mobile stability
-    let constraints = {
-        video: {
-            facingMode: { ideal: "environment" } // Forces back camera
-        },
-        audio: false
-    };
+            let canvas = createCanvas(320, 260);
+            canvas.parent('canvas-container');
+            background(0);
+        }
 
-    video = createCapture(constraints, function(stream) {
-        console.log("Camera is ready!");
-    });
-    
-    video.size(320, 240);
-    video.hide();
+        function startCamera() {
+            // Mobile constraints to force the rear camera
+            let constraints = {
+                video: { facingMode: { ideal: "environment" } },
+                audio: false
+            };
 
-    flippedVideo = ml5.flipImage(video);
-    classifyVideo();
-}
-4. iOS (Safari) Specific Issue
-If you are on an iPhone, Safari has a "feature" that pauses video if it's not being "played" correctly. In your draw() function, add this one line at the very top:
+            video = createCapture(constraints, function(stream) {
+                console.log("Stream active");
+                document.getElementById('start-btn').style.display = 'none';
+                document.getElementById('status').innerText = "Scanning...";
+            });
 
-JavaScript
+            video.size(320, 240);
+            video.hide();
+            
+            // Start the classification loop
+            classifyVideo();
+        }
 
-function draw() {
-    if (video) video.play(); // Forces the camera stream to keep running
-    background(0);
-    // ... rest of your code
-5. Check the Console for Errors
-If it still won't come up, we need to see the "hidden" error messages.
-
-Open your site on a desktop computer.
-
-Right-click anywhere and select Inspect.
-
-Click the Console tab.
-
-If you see red text saying PermissionDeniedError or Could not start video source, it means the browser is still blocking the camera.
-
-Would you like me to rewrite the full index.html with these mobile-stability fixes included so you can just copy-paste it again?
-
-        // --- 4. DRAW (Your Code) ---
         function draw() {
             background(0);
-            image(flippedVideo, 0, 0);
-
-            fill(255);
-            textSize(16);
-            textAlign(CENTER);
-            text(label, width / 2, height - 10);
+            if (video) {
+                // Draw the video to the canvas
+                image(video, 0, 0, 320, 240);
+                
+                // Draw the label at the bottom
+                fill(255);
+                textSize(18);
+                textAlign(CENTER);
+                text(label, width / 2, height - 10);
+            }
         }
 
-        // --- 5. CLASSIFY (Your Code) ---
         function classifyVideo() {
-            flippedVideo = ml5.flipImage(video);
-            classifier.classify(flippedVideo, gotResult);
+            if (isModelLoaded && video) {
+                classifier.classify(video, gotResult);
+            } else {
+                // If model isn't ready, try again in 500ms
+                setTimeout(classifyVideo, 500);
+            }
         }
 
-        // --- 6. RESULTS (Your Code) ---
         function gotResult(error, results) {
             if (error) {
                 console.error(error);
                 return;
             }
-            label = results[0].label;
+            label = results[0].label + " (" + floor(results[0].confidence * 100) + "%)";
             classifyVideo();
         }
     </script>
 </body>
 </html>
-
- 
