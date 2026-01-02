@@ -33,16 +33,48 @@
 
         // --- 3. SETUP (Your Code) ---
         function setup() {
-            let canvas = createCanvas(320, 260);
-            canvas.parent('canvas-container'); // Put canvas inside the div
-            
-            video = createCapture(VIDEO);
-            video.size(320, 240);
-            video.hide();
+    let canvas = createCanvas(320, 260);
+    canvas.parent('canvas-container');
+    
+    // Updated video constraints for mobile stability
+    let constraints = {
+        video: {
+            facingMode: { ideal: "environment" } // Forces back camera
+        },
+        audio: false
+    };
 
-            flippedVideo = ml5.flipImage(video);
-            classifyVideo();
-        }
+    video = createCapture(constraints, function(stream) {
+        console.log("Camera is ready!");
+    });
+    
+    video.size(320, 240);
+    video.hide();
+
+    flippedVideo = ml5.flipImage(video);
+    classifyVideo();
+}
+4. iOS (Safari) Specific Issue
+If you are on an iPhone, Safari has a "feature" that pauses video if it's not being "played" correctly. In your draw() function, add this one line at the very top:
+
+JavaScript
+
+function draw() {
+    if (video) video.play(); // Forces the camera stream to keep running
+    background(0);
+    // ... rest of your code
+5. Check the Console for Errors
+If it still won't come up, we need to see the "hidden" error messages.
+
+Open your site on a desktop computer.
+
+Right-click anywhere and select Inspect.
+
+Click the Console tab.
+
+If you see red text saying PermissionDeniedError or Could not start video source, it means the browser is still blocking the camera.
+
+Would you like me to rewrite the full index.html with these mobile-stability fixes included so you can just copy-paste it again?
 
         // --- 4. DRAW (Your Code) ---
         function draw() {
