@@ -1,69 +1,77 @@
-<div>Teachable Machine Image Model - p5.js and ml5.js</div>
-<script src="https://cdn.jsdelivr.net/npm/p5@latest/lib/p5.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/p5@latest/lib/addons/p5.dom.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/ml5@latest/dist/ml5.min.js"></script>
-<script type="text/javascript">
-  // Classifier Variable
-  let classifier;
-  // Model URL
-  let imageModelURL = 'https://teachablemachine.withgoogle.com/models/7ZyhWuPe7/';
-  
-  // Video
-  let video;
-  let flippedVideo;
-  // To store the classification
-  let label = "";
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tree Leaf Identifier</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.4/p5.min.js"></script>
+    <script src="https://unpkg.com/ml5@latest/dist/ml5.min.js"></script>
+    <style>
+        body { font-family: sans-serif; text-align: center; background: #222; color: white; }
+        canvas { border-radius: 10px; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h2>Tree Leaf Identifier</h2>
+    <div id="canvas-container"></div>
 
-  // Load the model first
-  function preload() {
-    classifier = ml5.imageClassifier(imageModelURL + 'model.json');
-  }
+    <script>
+        // --- 1. SETTINGS ---
+        // REPLACE THIS with your own model link from Teachable Machine!
+       let imageModelURL = 'https://teachablemachine.withgoogle.com/models/7ZyhWuPe7/';
+        
+        let classifier;
+        let video;
+        let flippedVideo;
+        let label = "Loading model...";
 
-  function setup() {
-    createCanvas(320, 260);
-    // Create the video
-    video = createCapture(VIDEO);
-    video.size(320, 240);
-    video.hide();
+        // --- 2. PRELOAD ---
+        function preload() {
+            // Load the model before the sketch starts
+            classifier = ml5.imageClassifier(imageModelURL + 'model.json');
+        }
 
-    flippedVideo = ml5.flipImage(video);
-    // Start classifying
-    classifyVideo();
-  }
+        // --- 3. SETUP (Your Code) ---
+        function setup() {
+            let canvas = createCanvas(320, 260);
+            canvas.parent('canvas-container'); // Put canvas inside the div
+            
+            video = createCapture(VIDEO);
+            video.size(320, 240);
+            video.hide();
 
-  function draw() {
-    background(0);
-    // Draw the video
-    image(flippedVideo, 0, 0);
+            flippedVideo = ml5.flipImage(video);
+            classifyVideo();
+        }
 
-    // Draw the label
-    fill(255);
-    textSize(16);
-    textAlign(CENTER);
-    text(label, width / 2, height - 4);
-  }
+        // --- 4. DRAW (Your Code) ---
+        function draw() {
+            background(0);
+            image(flippedVideo, 0, 0);
 
-  // Get a prediction for the current video frame
-  function classifyVideo() {
-    flippedVideo = ml5.flipImage(video)
-    classifier.classify(flippedVideo, gotResult);
-    flippedVideo.remove();
+            fill(255);
+            textSize(16);
+            textAlign(CENTER);
+            text(label, width / 2, height - 10);
+        }
 
-  }
+        // --- 5. CLASSIFY (Your Code) ---
+        function classifyVideo() {
+            flippedVideo = ml5.flipImage(video);
+            classifier.classify(flippedVideo, gotResult);
+        }
 
-  // When we get a result
-  function gotResult(error, results) {
-    // If there is an error
-    if (error) {
-      console.error(error);
-      return;
-    }
-    // The results are in an array ordered by confidence.
-    // console.log(results[0]);
-    label = results[0].label;
-    // Classifiy again!
-    classifyVideo();
-  }
-</script>
+        // --- 6. RESULTS (Your Code) ---
+        function gotResult(error, results) {
+            if (error) {
+                console.error(error);
+                return;
+            }
+            label = results[0].label;
+            classifyVideo();
+        }
+    </script>
+</body>
+</html>
 
-
+ 
